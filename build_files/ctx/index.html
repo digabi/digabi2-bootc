@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Abitti 2 Koe</title>
+    <style>
+        html, body {
+            display: flex;
+            flex-direction: column;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+            font-family: 'Noto Sans', sans-serif;
+            overscroll-behavior: none;
+        }
+
+        .k-exam-body {
+            min-height: 100vh;
+            background: #E6EFFF;
+        }
+
+        .k-exam-main {
+            width: 900px;
+            min-height: 660px;
+            margin: auto;
+            background: #FFFFFF;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .k-exam-header {
+            position: relative;
+            top: 0;
+            right: 0;
+            width: 100%;
+            display: flex;
+            justify-content:flex-end;
+            gap: 16px;
+        }
+
+        .k-exam-header-language-selector {
+            background: none;
+            border: none;
+            font-size: 16px;
+            color: #204D99;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .k-exam-header-language-selected {
+            font-weight: 700;
+            color: #000000;
+            cursor: default;
+        }
+
+        .k-exam-header-language-selector:hover {
+            color: #424242;
+        }
+
+        .k-exam-header-language-selected:hover {
+            color: #000000;
+        }
+
+        .k-exam-main-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 24px;
+            gap: 24px;
+        }
+
+        .k-exam-image-container {
+            margin: 40px 0 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .k-exam-login-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .k-exam-login-element {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+        }
+
+        .k-exam-login-title {
+            font-size: 32px;
+            line-height: 44px;
+            text-align: center;
+            color: #000000;
+            margin: 0;
+        }
+
+        .k-exam-server-description {
+            width: 310px;
+            font-size: 16px;
+            line-height: 24px;
+            text-align: center;
+            color: #000000;
+            margin: 20px 0 0 0;
+        }
+
+        .k-exam-text-input {
+            width: 340px;
+            height: 42px;
+            padding: 10px 16px;
+            border: 1px solid #424242;
+            border-radius: 4px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        .k-exam-text-input::placeholder {
+            color: #595959;
+        }
+
+        .k-exam-button {
+            padding: 9px 20px;
+            gap: 10px;
+            height: 42px;
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+        }
+
+        .k-exam-start-exam-button {
+            border: none;
+            border-radius: 4px;
+            font-size: 18px;
+            background-color: #204D99;
+            color: #FFFFFF;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .k-exam-start-exam-button:hover {
+            background: #466fb5;
+        }
+
+        .k-exam-start-exam-button:disabled {
+            background: #D8D8D8;
+            color: #424242;
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .k-exam-close-button {
+            padding: 9px 16px;
+            color: #204D99;
+            background: #FFFFFF;
+            cursor: pointer;
+            font-size: 18px;
+            border: 1px solid #204D99;
+            border-radius: 4px;
+            display: none;
+        }
+
+        .k-exam-close-button:hover {
+            background-color: #e6efff;
+            color: #424242;
+        }
+
+        .k-exam-error {
+            color: #D32F2F;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .k-exam-footer {
+            display: flex;
+            height: 100px;
+            margin-top: auto;
+            background: #173E82;
+            padding: 14px 28px;
+            align-items: center;
+        }
+
+        .k-exam-footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .k-exam-footer-text {
+            display: flex;
+            flex-direction: column;
+            color: #FFFFFF;
+            font-size: 18px;
+            line-height: 1.2;
+        }
+    </style>
+    <script>
+        /* Adapted from <https://jotai.org/docs/guides/core-internals> */
+        window.atom = function atom(read, write) {
+            if (typeof read === 'function') {
+                return { read, write }
+            }
+            const config = {
+                init: read,
+                read: (get) => get(config),
+                write: write ? write : (get, set, arg) => {
+                    if (typeof arg === 'function') {
+                        set(config, arg(get(config)))
+                    } else {
+                        set(config, arg)
+                    }
+                }
+            }
+            return config
+        }
+        const atomStateMap = new WeakMap()
+        function getAtomState(atom) {
+            let atomState = atomStateMap.get(atom)
+            if (!atomState) {
+                atomState = {
+                    value: atom.init,
+                    listeners: new Set(),
+                    dependents: new Set(),
+                }
+                atomStateMap.set(atom, atomState)
+            }
+            return atomState
+        }
+        function readAtom(atom) {
+            const atomState = getAtomState(atom)
+            function get(a) {
+                if (a === atom) {
+                    return atomState.value
+                }
+                const aState = getAtomState(a)
+                aState.dependents.add(atom)
+                return readAtom(a)
+            }
+            const value = atom.read(get)
+            atomState.value = value
+            return value
+        }
+        function notify(atom) {
+            const atomState = getAtomState(atom)
+            atomState.dependents.forEach(d => {
+                if (d !== atom) {
+                    notify(d)
+                }
+            })
+            atomState.listeners.forEach(l => l())
+        }
+        function writeAtom(atom, value) {
+            const atomState = getAtomState(atom)
+            function get(a) {
+                const aState = getAtomState(a)
+                return aState.value
+            }
+            function set(a, v) {
+                if (a === atom) {
+                    atomState.value = v
+                    notify(atom)
+                    return
+                }
+                writeAtom(a, v)
+            }
+            atom.write(get, set, value)
+        }
+        const atomMap = new Map()
+        window.withAtom = function withAtom(a, cb) {
+            const atomState = getAtomState(a)
+            const write = value => writeAtom(a, value)
+            const read = cb(write)
+            read && atomState.listeners.add(() => read(readAtom(a)))
+            read && read(readAtom(a))
+        }
+    </script>
+
+    <!-- Localization -->
+    <script>
+        const languageTexts = {
+            "fi-FI": {
+                welcome: "Tervetuloa kokeeseen",
+                serverDescription: "Saat opettajalta koepalvelimen nimen. Syötä se alla olevaan kenttään.",
+                serverPlaceholder: "Koepalvelimen nimi",
+                startButton: "Aloita kirjautuminen",
+                closeButton: "Sulje koejärjestelmä",
+                errorMessage: "Tarkista koepalvelimen nimi"
+            },
+            "sv-FI": {
+                welcome: "Välkommen till provet",
+                serverDescription: "Du får provserverns namn från läraren. Skriv in det i det nedanstående fältet.",
+                serverPlaceholder: "Provserverns namn",
+                startButton: "Börja inloggning",
+                closeButton: "Stäng provsystemet",
+                errorMessage: "Kontrollera provserverns namn"
+            },
+            "en-FI": {
+                welcome: "Welcome to the exam",
+                serverDescription: "You will receive the exam server name from your teacher. Enter it in the field below.",
+                serverPlaceholder: "Exam server name",
+                startButton: "Start login",
+                closeButton: "Close exam system",
+                errorMessage: "Check the exam server name"
+            }
+        }
+    </script>
+</head>
+<body class="k-exam-body">
+    <div class="k-exam-main">
+        <div class="k-exam-main-container" lang="fi-FI" aria-hidden="false">
+            <div class="k-exam-header"><a class="k-exam-header-language-selector k-exam-header-language-selected" id="fi-FI">Suomeksi</a>
+                <a class="k-exam-header-language-selector" id="sv-FI">På svenska</a>
+                <a class="k-exam-header-language-selector" id="en-FI">In English</a>
+                </div>
+            <div>
+                <div class="k-exam-image-container">
+                    <svg width="146" height="101" viewBox="0 0 146 101" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <g clip-path="url(#clip0_3494_1313)">
+                        <path d="M100.157 2.6097C100.611 2.6097 100.885 2.89451 101.011 3.06329C101.138 3.23207 101.402 3.68565 101.212 4.29747L101.17 4.44515L101.149 4.59283L95.4524 41.8291C95.273 42.2827 94.8722 42.5781 94.4397 42.5781H31.0431C30.5895 42.5781 30.3152 42.2932 30.1887 42.1245C30.0621 41.9557 29.7984 41.5021 29.9882 40.8903L30.0304 40.7426L30.0515 40.5949L35.7477 3.35865C35.927 2.90506 36.3279 2.6097 36.7604 2.6097H100.157ZM100.157 0.5H36.7709C35.368 0.5 34.1233 1.44937 33.7013 2.85232L27.9735 40.2679C27.3089 42.4515 28.8595 44.6772 31.0431 44.6772H94.4397C95.8427 44.6772 97.0874 43.7278 97.5093 42.3249L103.237 4.90928C103.902 2.72574 102.351 0.5 100.168 0.5H100.157Z" fill="#6694E3"/>
+                        <path d="M94.0495 44.3713L71.4652 67.5358H71.3491L3.78583 67.5464L29.1867 44.6561L29.4926 44.5401L29.7985 44.424L94.0601 44.3502M94.4293 42.2405L29.4082 42.3143C28.9441 42.4936 28.5327 42.6519 28.0791 42.8312L2.07697 66.2595C0.74786 67.462 1.59174 69.6666 3.38499 69.6666H71.4968C72.5095 69.519 72.3829 69.5822 72.9314 69.0654L95.8111 45.5844C97.0137 44.3502 96.1381 42.2616 94.4082 42.2616L94.4293 42.2405Z" fill="#6694E3"/>
+                        <path d="M95.6319 43.6118C97.6888 43.6118 98.6699 46.0485 97.1509 47.3882L73.8914 71.3017C73.48 71.6709 72.9315 71.8713 72.3724 71.8713H3.80699C1.75002 71.8713 0.769011 69.4346 2.288 68.0949" stroke="#6694E3" stroke-width="2" stroke-miterlimit="10"/>
+                        <path d="M100.653 60.4684L69.7141 94.0232C69.7141 94.0232 65.2521 99.0127 62.0137 98.9072C58.7753 98.8017 111.486 99.4452 111.486 99.4452C111.486 99.4452 114.218 98.1794 116.223 94.4663C118.227 90.7532 144.461 61.3756 144.461 61.3756L100.663 60.4789L100.653 60.4684Z" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M121.318 13.8755C126.013 13.8755 129.82 13.134 129.82 12.2194C129.82 11.3047 126.013 10.5632 121.318 10.5632C116.622 10.5632 112.815 11.3047 112.815 12.2194C112.815 13.134 116.622 13.8755 121.318 13.8755Z" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M113.005 46.9873L112.931 48.4746C112.931 49.9409 116.739 51.1329 121.434 51.1329C126.128 51.1329 129.936 49.9409 129.936 48.4746L129.893 46.9873" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M111.096 15.3417L112.889 12.1666" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M131.623 15.384L129.82 12.2089" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M111.17 46.3754C111.17 47.578 115.727 49.213 121.349 49.213C126.971 49.213 131.549 47.6307 131.549 46.4282V15.1729C131.549 16.3754 126.971 17.2932 121.349 17.2932C115.727 17.2932 111.17 16.3227 111.17 15.1096V46.4282" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M122.888 75.5427L120.805 72.4688L96.7467 88.77L98.8295 91.8439L122.888 75.5427Z" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M96.908 88.6329L93.1211 93.2426L99.0388 91.7131" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M128.606 71.6514L126.523 68.5775L120.786 72.465L122.869 75.5389L128.606 71.6514Z" stroke="#6694E3" stroke-width="2" stroke-linejoin="round"/>
+                        <path d="M42.7942 9.62451H63.1212" stroke="#6694E3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M39.155 34.3291H65.1044" stroke="#6694E3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M41.9292 16.5232H60.5051" stroke="#6694E3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M40.4946 26.4705H55.2942" stroke="#6694E3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </g>
+                        <defs>
+                        <clipPath id="clip0_3494_1313">
+                        <rect width="145.011" height="100" fill="white" transform="translate(0.494629 0.5)"/>
+                        </clipPath>
+                        </defs>
+                        </svg>
+                </div>
+                <div class="k-exam-login-title" id="welcomeText">Tervetuloa kokeeseen</div>
+                <form id="form" class="k-exam-login-form">
+                    <div class="k-exam-login-element">
+                        <span class="k-exam-server-description" id="serverDescription">Saat opettajalta koepalvelimen nimen. Syötä se alla olevaan kenttään.</span>
+                        <div>
+                            <input placeholder="Koepalvelimen nimi" id="serverName" class="k-exam-text-input" type="text" required pattern="([a-z]{5,8}[\- ][a-z]{5,8})|(https:\/\/)?[a-z0-9.\-]+\.[a-z0-9.\.]+(:\d+)?" autocomplete="off">
+                            <div class="k-exam-error k-exam-error-target" id="errorMessage"></div>
+                        </div>
+                        <button id="submit" type="submit" class="k-exam-start-exam-button k-exam-button">
+                            Aloita kirjautuminen
+                        </button>
+                        <button id="closeButton" type="button" class="k-exam-close-button k-exam-button">
+                            Sulje koejärjestelmä
+                        </button>
+                        <input type="hidden" name="lang" id="langInput"/>
+                    </div>
+                </form>
+                <script defer>
+                    const inputAtom = atom("")
+                    withAtom(inputAtom, setValue =>
+                        document.getElementById("serverName").addEventListener("input", ev => setValue(ev.currentTarget.value))
+                    )
+
+                    const languageAtom = atom("fi-FI", (get, set, value) => {
+                        set(languageAtom, value)
+                        document.querySelector(".k-exam-main-container").setAttribute("lang", value)
+                    })
+
+                    withAtom(languageAtom, setValue => {
+                        const languageSelectors = document.querySelectorAll(".k-exam-header-language-selector")
+                        languageSelectors.forEach(selector => {
+                            selector.addEventListener("click", () => {
+                                setValue(selector.id)
+                            })
+                        })
+                    })
+
+                    withAtom(languageAtom, () => {
+                        return value => {
+                            const texts = languageTexts[value]
+                            document.getElementById("welcomeText").textContent = texts.welcome
+                            document.getElementById("serverDescription").textContent = texts.serverDescription
+                            document.getElementById("serverName").placeholder = texts.serverPlaceholder
+                            document.getElementById("submit").textContent = texts.startButton
+                            document.getElementById("closeButton").textContent = texts.closeButton
+
+                            const errorElement = document.getElementById("errorMessage")
+                            if (errorElement.textContent.trim() !== "" && errorElement.textContent !== "\u00a0") {
+                                errorElement.textContent = texts.errorMessage
+                            }
+
+                            const languageSelectors = document.querySelectorAll(".k-exam-header-language-selector")
+                            languageSelectors.forEach(selector => {
+                                selector.classList.remove("k-exam-header-language-selected")
+                                if (selector.id === value) {
+                                    selector.classList.add("k-exam-header-language-selected")
+                                }
+                            })
+                        }
+                    })
+
+                    const customHostAtom = atom(get => get(inputAtom).includes("."))
+                    const labelAtom = atom(get => get(inputAtom).trim().replace(/\s+/g, "-"))
+                    const hostAtom = atom(get => get(customHostAtom) ? get(inputAtom) : `${get(labelAtom)}.koe.abitti.net:8010`)
+                    const urlAtom = atom(get => `https://${get(hostAtom).replace(/^https?:\/\//, "")}`)
+
+                    withAtom(urlAtom, () => {
+                        return value => document.getElementById("form").action = value
+                    })
+
+                    const busyAtom = atom(false)
+                    const disabledAtom = atom(get => (void get(inputAtom), !document.getElementById("serverName").validity.valid || get(busyAtom)))
+                    withAtom(disabledAtom, setValue => {
+                        return value => document.getElementById("submit").disabled = value
+                    })
+
+                    withAtom(languageAtom, () => {
+                        return value => document.getElementById("langInput").value = value
+                    })
+
+                    const shutdownAtom = atom(null, (get, set) => {
+                        window.chrome.webview.hostObjects.sync.windowsKioskAPI.Notify(
+                            `{"Type":"ShutdownRequested","Body":true}`
+                        )
+                    })
+                    withAtom(shutdownAtom, setValue => {
+                        document.getElementById("closeButton").addEventListener("click", () => setValue())
+                    })
+
+                    const errorAtom = atom()
+                    withAtom(errorAtom, () => {
+                        return value => {
+                            const target = document.querySelector(".k-exam-error-target")
+                            target.textContent = value ?? "\u00a0"
+                        }
+                    })
+
+                    const blockedAtom = atom(true)
+                    const submitAtom = atom(null, async (get, set, ev) => {
+                        if (!get(blockedAtom)) {
+                            return
+                        }
+                        set(busyAtom, true)
+                        set(errorAtom)
+                        ev.preventDefault()
+
+                        const url = new URL("/ktp/hello", ev.target.action)
+                        const checkResult = await fetch(url, { method: "POST" })
+                            .then(resp => resp.ok)
+                            .catch(() => false)
+
+                        await new Promise(resolve => window.setTimeout(resolve, 1000))
+                        set(busyAtom, false)
+                        set(blockedAtom, !checkResult)
+
+                        if (checkResult) {
+                            Object.getPrototypeOf(ev.target).submit.call(ev.target)
+                        } else {
+                            set(errorAtom, languageTexts[get(languageAtom)].errorMessage)
+                        }
+                    })
+                    withAtom(submitAtom, setValue => {
+                        document.getElementById("form").addEventListener("submit", setValue)
+                    })
+                    document.getElementById("serverName").focus()
+                </script>
+            </div>
+        </div>
+    </div>
+    <div class="k-exam-footer" aria-hidden="true">
+        <div class="k-exam-footer-logo">
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M71.9129 36.0436C71.9129 16.1832 55.8169 0.0871582 35.9564 0.0871582C16.096 0.0871582 0 16.1832 0 36.0436C0 55.9041 16.1044 72.0001 35.9564 72.0001C55.8085 72.0001 71.9129 55.9041 71.9129 36.0436ZM67.9374 36.0436C67.9374 53.7095 53.6224 68.0246 35.9564 68.0246C18.2905 68.0246 3.97547 53.7095 3.97547 36.0436C3.97547 18.3777 18.2905 4.06262 35.9649 4.06262C53.6393 4.06262 67.9459 18.3861 67.9459 36.0436H67.9374Z" fill="#CFAE7B"/>
+                <path d="M66.2577 36.0435C66.2577 19.3145 52.6938 5.74219 35.9564 5.74219C19.2189 5.74219 5.65503 19.3145 5.65503 36.0435C5.65503 52.7725 19.2273 66.3448 35.9564 66.3448C52.6854 66.3448 66.2577 52.781 66.2577 36.0435ZM64.8312 36.0435C64.8312 51.9876 51.9089 64.91 35.9648 64.91C20.0207 64.91 7.08991 51.9876 7.08991 36.0435C7.08991 20.0994 20.0123 7.17707 35.9564 7.17707C51.9004 7.17707 64.8228 20.0994 64.8228 36.0435H64.8312Z" fill="#CFAE7B"/>
+                <path d="M25.5579 58.0818C25.4566 58.8667 23.7516 61.9982 23.7516 62.5806C23.7516 62.7916 25.2793 63.4415 25.676 63.3064C27.7271 60.3523 31.1877 58.411 35.1125 58.411C37.8725 58.411 40.6326 59.6011 42.6077 61.2048C42.6077 61.2048 43.0044 60.9937 43.2744 60.749C43.5445 60.5042 43.6627 60.2088 43.6627 60.2088C43.3504 58.9511 40.7592 55.786 39.8138 54.8913C37.4421 52.663 38.8685 49.5907 39.3412 48.5862C39.9911 48.5862 40.6073 48.6369 41.0124 48.3077C41.3331 48.0123 41.3331 47.6071 41.3078 47.3033C41.2825 47.0079 40.9618 46.6618 40.8858 46.4002C40.717 45.8093 40.7339 45.6574 41.0124 45.1088C41.3331 45.1341 41.8142 45.1341 42.1603 44.9231C42.4979 44.7205 42.2532 44.3913 42.2532 44.0368C42.1941 42.028 42.2363 40.7281 43.2069 39.8335C47.2077 36.1534 47.4694 34.0011 47.596 33.3596C47.8829 33.5706 50.2969 35.6301 47.1824 44.8218C46.9461 45.5139 45.0807 51.2872 45.7728 56.495C45.8657 56.9676 46.0345 58.124 46.2708 58.5798C46.2708 58.5798 46.524 58.681 47.3934 58.411C48.2628 58.1409 48.3134 57.8961 48.3134 57.8961C48.1024 56.9086 47.8998 54.6127 50.93 49.8354C53.4874 45.8093 58.0706 40.112 58.9315 31.7306C60.0879 20.4794 52.5505 13.381 44.3126 10.4268C41.6961 9.57433 38.9023 9.11011 35.9988 9.11011C34.5723 9.11011 33.1796 9.22827 31.8123 9.43929C31.8123 9.43929 31.6603 10.2243 31.6603 10.8404C31.6603 11.5747 31.8123 12.2837 31.8123 12.2837C32.3947 12.6045 34.9268 13.1109 35.9481 13.803C36.6656 14.2926 37.2986 17.3733 37.1973 18.9095C26.5707 17.4662 19.7762 24.7334 16.6701 29.8568C16.3493 30.3801 15.9357 30.8106 16.5856 30.8106C16.8051 30.8106 17.2271 30.8275 17.2271 30.8275L15.0748 34.8451C14.7709 35.4613 14.2898 36.069 15.2521 36.069H18.1556C18.2991 37.0987 18.24 38.2044 17.9952 39.2089C17.8517 39.5887 17.0077 42.0195 16.4337 44.4335C16.1383 45.3873 16.5519 45.3704 17.3791 45.5223C18.0374 45.649 18.3328 45.708 18.738 45.7924C18.9152 46.3748 18.7126 46.6956 18.5101 47.067C18.4088 47.2526 18.2147 47.3286 18.2147 47.5903C18.2147 47.9701 18.7886 48.1136 18.9237 48.2908C18.8477 48.485 18.5016 48.6875 18.5101 48.9745C18.5101 49.1686 18.6451 49.616 19.0756 49.6751C19.2022 49.7088 19.4132 49.6244 19.5314 49.6751C19.6833 49.7426 19.8015 50.0971 19.8015 50.2237C19.8015 50.3672 19.7086 50.5022 19.6411 50.6795C19.4301 51.2534 19.16 52.1228 19.371 52.7896C19.945 54.6296 22.8485 54.3258 24.8911 53.9966C25.1612 54.6296 25.6507 57.3053 25.5494 58.0396L25.5579 58.0818Z" fill="#CFAE7B"/>
+                </svg>
+            <div class="k-exam-footer-text">
+                <span>Ylioppilastutkintolautakunta</span>
+                <span>Studentexamensnämnden</span>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
