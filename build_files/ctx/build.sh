@@ -2,7 +2,7 @@
 
 set -ouex pipefail
 
-dnf5 install -y gdm gnome-kiosk-script-session ptyxis
+dnf5 install -y gdm gnome-kiosk-script-session
 
 flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
 flatpak install -y flathub io.github.ungoogled_software.ungoogled_chromium

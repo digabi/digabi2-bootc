@@ -1,12 +1,36 @@
-
-
 @default:
 	just --list
 
-build:
-	podman build . -t localhost/lmao
-	truncate -s 10G lol.raw
-	podman run --rm --privileged --pid=host --security-opt label=type:unconfined_t -v /dev:/dev -v /var/lib/containers:/var/lib/containers -v .:/output localhost/lmao:latest bootc install to-disk --generic-image --via-loopback --filesystem btrfs --wipe /output/lol.raw
+build oci_name="ghcr.io/digabi/abitti2-ublue-lite" oci_version="latest" raw_name="abitti2-ublue-lite.raw":
+	podman build . -t "{{ oci_name }}"
+	truncate -s 10G "{{ raw_name }}"
+	podman run \
+		--rm \
+		--privileged \
+		--pid=host \
+		--security-opt label=type:unconfined_t \
+		-v /dev:/dev \
+		-v /var/lib/containers:/var/lib/containers \
+		-v .:/output \
+		"{{ oci_name }}":latest \
+			bootc install to-disk \
+				--generic-image \
+				--karg=quiet --karg=rhgb \
+				--via-loopback \
+				--filesystem btrfs \
+				--wipe /output/"{{ raw_name }}"
 
-run:
-	qemu-system-x86_64 -enable-kvm -M q35 -cpu host -smp 6 -m 4G -net nic,model=virtio -net user,hostfwd=tcp::2222-:22 -display gtk,show-cursor=on -drive format=raw,file=lol.raw
+run raw_name="abitti2-ublue-lite.raw":
+	(sleep 30 && xdg-open "http://localhost:8006") & \
+	podman run \
+		--rm \
+		--privileged \
+		--publish "127.0.0.1:8006:8006" \
+		--env "CPU_CORES=4" \
+		--env "RAM_SIZE=8G" \
+		--env "DISK_SIZE=16G" \
+		--env "TPM=Y" \
+		--env "GPU=Y" \
+		--device=/dev/kvm \
+		--volume ./"{{ raw_name }}":"/boot.raw" \
+		docker.io/qemux/qemu
