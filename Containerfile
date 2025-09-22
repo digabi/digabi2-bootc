@@ -1,7 +1,7 @@
 FROM scratch AS ctx
 COPY build_files/ctx /
 
-FROM ghcr.io/ublue-os/base-main:latest
+FROM quay.io/fedora/fedora-bootc:latest
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
