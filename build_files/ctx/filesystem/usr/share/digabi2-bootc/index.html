@@ -489,7 +489,19 @@
                 <path d="M31.42,154.29H12.8c-3.91,0-7.08-3.18-7.08-7.08V12.8c0-3.91,3.18-7.08,7.08-7.08h18.62v5.67H12.8c-.56,0-1.01.45-1.01,1.01v135.21c0,.56.45,1.01,1.01,1.01h18.62v5.67Z" fill="#002c77"/>
             </svg>
         </div>
-        <div class="k-exam-footer-version">digabi2-bootc<code style="white-space:pre"> <small>&middot;</small> <abbr style="text-decoration:none" title="built on: {{BUILD_TIMESTAMP}}">{{BUILD_REVISION}}</abbr></code></div>
+        <style>
+            abbr.shame {
+                text-decoration: none;
+                display: inline-block;
+                width: 7ch;
+                height: auto;
+                overflow: hidden;
+                vertical-align: text-top;
+            }
+        </style>
+        <div class="k-exam-footer-version">
+            digabi2-bootc<code> <small>&middot;</small> <abbr class="shame" title="built on: {{BUILD_TIMESTAMP}}">{{BUILD_REVISION}}</abbr></code>
+        </div>
     </div>
 </body>
 </html>
