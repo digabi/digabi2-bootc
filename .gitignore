@@ -1,2 +1,4 @@
-*.raw
+*.iso
 *.key
+*.raw
+build_files/ctx/transient/*

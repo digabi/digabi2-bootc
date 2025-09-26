@@ -61,9 +61,9 @@ jobs:
         if: inputs.platform == 'arm64'
         run: |
           set -x
-          sudo apt update -y
-          sudo apt install -y \
-            podman
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            podman qemu-utils
 
       # - name: Maximize build space
       #   if: inputs.platform != 'arm64'
@@ -93,10 +93,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build disk image
-        id: build
+      - name: Install to raw image
+        id: prebuild
         run: |
-          truncate -s 10G ${{ github.workspace }}/"${{ env.IMAGE_NAME }}.raw"
+          truncate -s 8G ${{ github.workspace }}/"${{ env.IMAGE_NAME }}.raw"
           sudo podman run \
             --rm \
             --privileged \
@@ -113,11 +113,15 @@ jobs:
                   --filesystem btrfs \
                   --wipe /output/"${{ env.IMAGE_NAME }}.raw"
 
+      - name: Build ISO image
+        id: build
+        run: qemu-img convert "${{ github.workspace }}/${{ env.IMAGE_NAME }}.raw" "${{ github.workspace }}/${{ env.IMAGE_NAME }}.iso"
+
       - name: Upload disk images and Checksum to Job Artifacts
         if: inputs.upload-to-s3 != true && github.event_name != 'pull_request'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          path: ${{ github.workspace }}/${{ env.IMAGE_NAME }}.raw
+          path: ${{ github.workspace }}/${{ env.IMAGE_NAME }}.iso
           if-no-files-found: error
           retention-days: 0
           compression-level: 0

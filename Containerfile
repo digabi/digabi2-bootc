@@ -1,7 +1,11 @@
+ARG BASE_IMAGE="quay.io/fedora/fedora-bootc:latest"
+
 FROM scratch AS ctx
 COPY build_files/ctx /
 
-FROM quay.io/fedora/fedora-bootc:latest
+FROM ${BASE_IMAGE}
+ARG BUILD_REVISION
+ARG BUILD_TIMESTAMP
 
 RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     --mount=type=cache,dst=/var/cache \
@@ -10,4 +14,4 @@ RUN --mount=type=bind,from=ctx,source=/,target=/ctx \
     /ctx/build.sh && \
     ostree container commit
 
-RUN bootc container lint
+RUN bootc container lint --no-truncate

@@ -1,9 +1,12 @@
 @default:
 	just --list
 
-build oci_name="ghcr.io/digabi/abitti2-ublue-lite" oci_version="latest" raw_name="abitti2-ublue-lite.raw":
-	podman build . -t "{{ oci_name }}"
-	truncate -s 10G "{{ raw_name }}"
+build oci_name="ghcr.io/digabi/digabi2-bootc" oci_version="latest" raw_name="digabi2-bootc.raw":
+	podman build . \
+		--tag "{{ oci_name }}" \
+		--build-arg BUILD_REVISION=$(git rev-parse --short --verify HEAD) \
+		--build-arg BUILD_TIMESTAMP=$(date -Iseconds)
+	truncate -s 8G "{{ raw_name }}"
 	podman run \
 		--rm \
 		--privileged \
@@ -12,7 +15,7 @@ build oci_name="ghcr.io/digabi/abitti2-ublue-lite" oci_version="latest" raw_name
 		-v /dev:/dev \
 		-v /var/lib/containers:/var/lib/containers \
 		-v .:/output \
-		"{{ oci_name }}":latest \
+		"{{ oci_name }}":"{{ oci_version }}" \
 			bootc install to-disk \
 				--generic-image \
 				--karg=quiet --karg=rhgb \
@@ -20,7 +23,7 @@ build oci_name="ghcr.io/digabi/abitti2-ublue-lite" oci_version="latest" raw_name
 				--filesystem btrfs \
 				--wipe /output/"{{ raw_name }}"
 
-run raw_name="abitti2-ublue-lite.raw":
+run raw_name="digabi2-bootc.raw":
 	(sleep 30 && xdg-open "http://localhost:8006") & \
 	podman run \
 		--rm \
