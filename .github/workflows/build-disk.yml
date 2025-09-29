@@ -56,7 +56,6 @@ jobs:
           echo "USER_GID=${USER_GID}" >> ${GITHUB_ENV}
 
       - name: Install dependencies
-        if: inputs.platform == 'arm64'
         run: |
           set -x
           sudo apt-get update -y
