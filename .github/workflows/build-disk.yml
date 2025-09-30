@@ -97,5 +97,7 @@ jobs:
           BUCKET_URL: "s3://digabi.utility.abitti2-bucket"
           CF_DISTRIBUTION_ID: ${{ secrets.CF_DISTRIBUTION_ID }}
         run: |
+          (cd ${{ github.workspace }}; sha256sum ${{ env.IMAGE_NAME }}.iso) > sha256sum.txt
+          aws s3 cp sha256sum.txt "$BUCKET_URL/linux/${{ env.IMAGE_NAME }}.iso.sha256sum"
           aws s3 cp ${{ github.workspace }}/${{ env.IMAGE_NAME }}.iso "$BUCKET_URL/linux/${{ env.IMAGE_NAME }}.iso"
           aws cloudfront create-invalidation --distribution-id "$CF_DISTRIBUTION_ID" --paths "/linux/${{ env.IMAGE_NAME }}.iso"
