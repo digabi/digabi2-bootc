@@ -20,8 +20,8 @@ Before any contribution is accepted to the codebase, to clarify the intellectual
 
 This repository contains a proof-of-concept of a bootable Abitti 2 Candidate disk image. The image is based on [bootc](https://github.com/bootc-dev/bootc) project which is a modern way of creating Linux boot media.
 
-The purpose of this proof-of-concept is to demonstrate how the image is being built to make it easier to give feedback of the solution.
+The purpose of this proof-of-concept is to demonstrate how the image is built in order to make it easier to give feedback of the solution. Individual technology choices, including the browser, browser engine, and desktop session manager, are not finalized and thus not representative of any possible final product.
 
 Please send your feedback to Abitti support (abitti@ylioppilastutkinto.fi). As stated above, we don't actively monitor GitHub issues or pull requests.
 
-**Download: https://dl.abitti.fi/linux/digabi2-bootc.iso**
+**Download (8 GB):** https://dl.abitti.fi/linux/digabi2-bootc.iso
