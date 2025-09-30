@@ -24,4 +24,12 @@ The purpose of this proof-of-concept is to demonstrate how the image is built in
 
 Please send your feedback to Abitti support (abitti@ylioppilastutkinto.fi). As stated above, we don't actively monitor GitHub issues or pull requests.
 
-**Download (8 GB):** https://dl.abitti.fi/linux/digabi2-bootc.iso
+## Download
+
+**ISO image (8 GB):** https://dl.abitti.fi/linux/digabi2-bootc.iso
+
+**Checksum:** https://dl.abitti.fi/linux/digabi2-bootc.iso.sha256sum
+
+To verify checksum:
+
+    sha256sum -c digabi2-bootc.iso.sha256sum
