@@ -1,0 +1,6 @@
+NAME="digabi2-bootc"
+ID="digabi2-bootc"
+ID_LIKE="fedora"
+VERSION_ID="{{BUILD_REVISION}}"
+PRETTY_NAME="digabi2-bootc"
+VARIANT_ID="digabi2-bootc"
