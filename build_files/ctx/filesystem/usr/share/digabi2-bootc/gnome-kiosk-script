@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-rm -rf /home/digabi/.config/chromium/SingletonLock
-chromium-browser --kiosk file:///usr/share/digabi2-bootc/index.html --password-store=basic
+chromium-browser --kiosk file:///usr/share/digabi2-bootc/index.html --password-store=basic --user-data-dir=/tmp/lol
 sleep 1.0
 exec "$0" "$@"
