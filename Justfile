@@ -25,15 +25,19 @@ build oci_name="ghcr.io/digabi/digabi2-bootc" oci_version="latest" raw_name="dig
 
 run raw_name="digabi2-bootc.raw":
 	(sleep 30 && xdg-open "http://localhost:8006") & \
-	podman run \
-		--rm \
-		--privileged \
-		--publish "127.0.0.1:8006:8006" \
-		--env "CPU_CORES=4" \
-		--env "RAM_SIZE=8G" \
-		--env "DISK_SIZE=16G" \
-		--env "TPM=Y" \
-		--env "GPU=Y" \
-		--device=/dev/kvm \
-		--volume ./"{{ raw_name }}":"/boot.raw" \
-		docker.io/qemux/qemu
+	( \
+		(podman kill --signal 9 $(podman ps --filter label=fi.digabi.digabi2-bootc --format '{''{.ID}''}') || true) && \
+		podman run \
+			--rm \
+			--privileged \
+			--publish "127.0.0.1:8006:8006" \
+			--env "CPU_CORES=4" \
+			--env "RAM_SIZE=8G" \
+			--env "DISK_SIZE=16G" \
+			--env "TPM=Y" \
+			--env "GPU=Y" \
+			--device=/dev/kvm \
+			--volume ./"{{ raw_name }}":"/boot.raw" \
+			--label fi.digabi.digabi2-bootc \
+			docker.io/qemux/qemu \
+	)
