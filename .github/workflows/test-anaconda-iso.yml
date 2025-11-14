@@ -1,0 +1,128 @@
+---
+name: Test Anaconda ISO Build
+
+on:
+  push:
+    branches:
+      - feature/iso-hard-drive-boot
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: ${{ github.event.repository.name }}
+  IMAGE_REGISTRY: "ghcr.io/${{ github.repository_owner }}"
+  DEFAULT_TAG: "latest"
+  BIB_IMAGE: "ghcr.io/lorbuschris/bootc-image-builder:20250608"
+
+jobs:
+  test-anaconda-iso:
+    name: Test Anaconda ISO Build
+    runs-on: "ubuntu-24.04"
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Prepare environment
+        run: |
+          USER_UID=$(id -u)
+          USER_GID=$(id -g)
+          echo "IMAGE_REGISTRY=${IMAGE_REGISTRY,,}" >> ${GITHUB_ENV}
+          echo "IMAGE_NAME=${IMAGE_NAME,,}" >> ${GITHUB_ENV}
+          echo "USER_UID=${USER_UID}" >> ${GITHUB_ENV}
+          echo "USER_GID=${USER_GID}" >> ${GITHUB_ENV}
+
+      - name: Install dependencies
+        run: |
+          set -x
+          sudo apt-get update -y
+          sudo apt-get install -y podman
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build container image
+        run: |
+          set -x
+          echo "Building bootc container image..."
+          echo "Image will be tagged as: ${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}"
+          
+          podman build . \
+            --tag "${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}" \
+            --build-arg BUILD_REVISION=${{ github.sha }} \
+            --build-arg BUILD_TIMESTAMP=$(date -Iseconds)
+          
+          echo "✓ Container image built successfully"
+          podman images | grep "${{ env.IMAGE_NAME }}"
+
+      - name: Push container image
+        run: |
+          IMAGE_URL="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}"
+          echo "Pushing container to GHCR: $IMAGE_URL"
+          podman push "$IMAGE_URL"
+          echo "✓ Push completed"
+
+      - name: Pull image as root for bootc-image-builder
+        run: |
+          IMAGE_URL="${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}"
+          echo "Pulling image into root's podman storage: $IMAGE_URL"
+          sudo podman pull "$IMAGE_URL"
+          echo "✓ Pull completed"
+          echo "Root's podman images:"
+          sudo podman images | grep "${{ env.IMAGE_NAME }}"
+
+      - name: Build Anaconda ISO
+        run: |
+          set -x
+          
+          # Build ISO using bootc-image-builder
+          # Note: bootc-image-builder outputs to different paths depending on version
+          # We search for the ISO because the exact output location isn't guaranteed
+          sudo podman run \
+            --rm \
+            --privileged \
+            --pull=newer \
+            --security-opt label=type:unconfined_t \
+            -v "${{ github.workspace }}":/output \
+            -v /var/lib/containers/storage:/var/lib/containers/storage \
+            "${{ env.BIB_IMAGE }}" \
+              --type anaconda-iso \
+              --rootfs btrfs \
+              "${{ env.IMAGE_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.DEFAULT_TAG }}"
+          
+          # bootc-image-builder may output to /output/bootiso/install.iso or /output/install.iso
+          # Find it wherever it is and rename to consistent name
+          ISO_FILE=$(find "${{ github.workspace }}" -name "*.iso" -type f | head -n1)
+          
+          if [ -z "$ISO_FILE" ]; then
+            echo "ERROR: No ISO file found"
+            ls -la "${{ github.workspace }}"
+            exit 1
+          fi
+          
+          sudo mv "$ISO_FILE" "${{ github.workspace }}/${{ env.IMAGE_NAME }}-anaconda.iso"
+          sudo chown ${{ env.USER_UID }}:${{ env.USER_GID }} "${{ github.workspace }}/${{ env.IMAGE_NAME }}-anaconda.iso"
+          ls -lh "${{ github.workspace }}/${{ env.IMAGE_NAME }}-anaconda.iso"
+
+      - name: Create checksum
+        run: |
+          cd "${{ github.workspace }}"
+          sha256sum ${{ env.IMAGE_NAME }}-anaconda.iso > ${{ env.IMAGE_NAME }}-anaconda.iso.sha256sum
+          cat ${{ env.IMAGE_NAME }}-anaconda.iso.sha256sum
+
+      - name: Upload ISO artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: digabi2-bootc-anaconda-iso
+          path: |
+            ${{ github.workspace }}/${{ env.IMAGE_NAME }}-anaconda.iso
+            ${{ github.workspace }}/${{ env.IMAGE_NAME }}-anaconda.iso.sha256sum
+          retention-days: 7
+          compression-level: 0
+
